@@ -7,6 +7,7 @@
 #
 #  (例)日→英翻訳。
 #  翻訳ja-en サンプルテキスト
+#
 module.exports = (robot) ->
   request = require("request")
   robot.hear /翻訳[A-Za-z]{2}-[A-Za-z]{2} (.*)/i, (res) -> 
