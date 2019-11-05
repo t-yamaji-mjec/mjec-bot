@@ -11,7 +11,7 @@ module.exports = (robot) ->
   request = require("request")
   robot.hear /翻訳(.*) (.*)/i, (res) -> 
     model = res.match[1]
-    original = res.match[2]
+    original = res.match[0].replace(("翻訳"+model),"") # 全文を対象とする為、先頭を除去
     request.post
       auth:
         user: 'apikey'
