@@ -36,6 +36,7 @@ module.exports = (robot) ->
 
   getDate = ->
     d = new Date
+    d.setTime(d.getTime() + 1000*60*60*9);// JSTに変換
     year = d.getFullYear()     # 年（西暦）
     month = (d.getMonth() + 1) # 月
     date = d.getDate()         # 日
@@ -43,6 +44,7 @@ module.exports = (robot) ->
 
   getTime = ->
      d = new Date
+     d.setTime(d.getTime() + 1000*60*60*9);// JSTに変換
      hour = d.getHours()  # 時
      min = d.getMinutes() # 分
      return "#{hour}:#{min}"
