@@ -1,0 +1,5 @@
+applications:
+- name: mjechubot
+  command: ./bin/hubot --adapter slack
+  instances: 1
+  memory: 256M
