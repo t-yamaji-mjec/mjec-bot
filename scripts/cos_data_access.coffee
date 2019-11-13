@@ -20,15 +20,6 @@ class CosDA
   objectStore = require('ibm-cos-sdk')
   cos = new objectStore.S3(config)
 
-  doCreateBucket : (bucket, location) ->
-    console.log('Creating bucket');
-    return cos.createBucket({
-        Bucket: bucket,
-        CreateBucketConfiguration: {
-          LocationConstraint: location
-        },
-    }).promise();
-
   doCreateObject : (bucket, path, body) ->
     console.log 'Creating object'
     return cos.putObject({
@@ -39,13 +30,9 @@ class CosDA
 
   doGetObject : (bucket, path) ->
     console.log 'Getting object'
-    fs = require('fs')
-    streams = require('memory-streams')
-    dest = new streams.WritableStream()
     return cos.getObject({
-      Bucket: bucket,
-      Key: path
-    }).createReadStream().pipe(dest)
+      Bucket: bucket
+      Key: path}).promise()
 
   doDeleteObject : (bucket, path) ->
     console.log 'Deleting object'
@@ -62,16 +49,17 @@ class CosDA
 
 module.exports = (robot) ->
   cos_da = new CosDA robot
-  bucket = 'mjec-hubot'
+  bucket = process.env['BUCKET_NAME']
+  bucket = 'mjec-bot'
   path = 'test.txt'
-  #robot.hear /bucket test (.*) (.*)/i, (msg) ->
-  #  cos_da.doCreateBucket(bucket=msg.match[1], location=msg.match[2])
   robot.hear /put test (.*)/i, (msg) ->
     cos_da.doCreateObject(bucket, path, body=msg.match[1])
   robot.hear /get test/i, (msg) ->
-    msg.send '取得内容:' + cos_da.doGetObject(bucket, path).toString()
+    cos_da.doGetObject(bucket, path).then(
+      (data) -> msg.send '取得内容:' + Buffer.from(data.Body).toString() if data isnt null)
   robot.hear /del test/i, (msg) ->
     cos_da.doDeleteObject(bucket, path)
   robot.hear /list test/i, (msg) ->
-    console.log cos_da.getBucketContents(bucket)
+    cos_da.getBucketContents(bucket).then(
+      (data) -> msg.send contents.Key + ", " for contents in data.Contents if data isnt null and data isnt null)
   module.exports = CosDA
