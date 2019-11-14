@@ -10,12 +10,10 @@
 #  打刻削除 [YYYY/MM/DD] - 当日の退社時間を記録する
 #  修正出社 [YYYY/MM/DD] [hh:mm] - 指定した日時の出社時間を修正する
 #  修正退社 [YYYY/MM/DD] [hh:mm] - 指定した日時の退社時間を修正する
-#  勤怠記録  - 勤怠記録を出力する ※将来的に当月指定などを入れる予定
+#  勤怠確認  - 勤怠記録を出力する ※将来的に当月指定などを入れる予定
 #
-cosDA = null
+CosDA = require('./cos_data_access')
 module.exports = (robot) ->
-  CosDA = require('./cos_data_access')
-  cosDA = new CosDA robot
   robot.hear /打刻出社/i, (msg) ->
     timecard(msg, "attend")
 
@@ -31,7 +29,7 @@ module.exports = (robot) ->
   robot.hear /修正退社 (\d+\D+\d+\D+\d+) (\d+:\d+)/i, (msg) ->
     timecard(msg, "modify_leave")
 
-  robot.hear /勤怠記録/i, (msg) ->
+  robot.hear /勤怠確認/i, (msg) ->
     timecard(msg, "record")
 
   getDate = ->
@@ -56,6 +54,7 @@ module.exports = (robot) ->
     json["Date"] = date
     json["AttendTime"] = attendTime
     json["LeaveTime"] = leaveTime
+    console.log json
     return json
 
   getTimeCardBase = ->
@@ -71,85 +70,68 @@ module.exports = (robot) ->
     JSON.parse(Buffer.from(data.Body).toString()) if data isnt null
 
   jsonFileWrite = (bucket, path, json) ->
-    cosDA.doCreateObject(bucket, path, JSON.stringify(json))
+    CosDA.doCreateObject(bucket, path, JSON.stringify(json))
 
-  setAttendTime = (bucket, path, userId, userName, date, time) ->
-    cosDA.doGetObject(bucket, path).then(
-      (data) -> jsonFileWrite(bucket, path, setAttendTimeLogic(jsonFileRead(data), userId, userName, date, time))).catch(
-      (e) -> jsonFileWrite(bucket, path, createNewData(userId, userName, date, time, "")))
-
-  setAttendTimeLogic = (userDataJson, userId, userName, date, time) ->
-    existDate = json.Date for json in userDataJson when json.Date == date
-    if existDate?
-      json.AttendTime = time for json in userDataJson when json.Date == date
-    else
-      userDataJson.push(createNewData(userId, userName, date, time, ""))
+  setExistDateTime = (userDataJson, userId, userName, date, attendTime, leaveTime) ->
+    for json in userDataJson when json.Date == date
+      if attendTime isnt "" then json.AttendTime = attendTime
+      if leaveTime isnt "" then json.LeaveTime = leaveTime
+      return userDataJson
+    userDataJson.push(createNewData(userId, userName, date, attendTime, leaveTime))
     return userDataJson
-
-  setLeaveTime = (bucket, path, userId, userName, date, time) ->
-    cosDA.doGetObject(bucket, path).then(
-      (data) -> jsonFileWrite(bucket, path, setLeaveTimeLogic(jsonFileRead(data), userId, userName, date, time))).catch(
-      (e) -> jsonFileWrite(bucket, path, createNewData(userId, userName, date, "", time)))
-
-  setLeaveTimeLogic = (userDataJson, userId, userName, date, time) ->
-    existDate = json.Date for json in userDataJson when json.Date == date
-    if existDate?
-      json.LeaveTime = time for json in userDataJson when json.Date == date
-    else
-      userDataJson.push(createNewData(userId, userName, date, "", time))
-    return userDataJson
-
-  deleteData = (bucket, path, userId, userName, date, time) ->
-    cosDA.doGetObject(bucket, path).then(
-      (data) -> jsonFileWrite(bucket, path, deleteDataLogic(jsonFileRead(data), date))).catch()
-
-  deleteDataLogic = (userDataJson, date) ->
+  deleteData = (userDataJson, date) ->
     newUserData = userDataJson.filter (item, index) ->
       if item.Date.toString() != date.toString()
         return true #削除対象の日付を除外
     return newUserData
 
-  #タイムカードメソッド
+  #タイムカードメソッド(初期化)
   timecard = (msg, mode) ->
     path = require('path')
     userId = '' + msg.message.user.id #文字列に変換
-    userName = '' + msg.message.user.name #文字列に変換
     bucket = process.env['BUCKET_NAME']
+    userData = CosDA.doGetObject(bucket, createPath(userId)) #Promiseを返却
+    userData.then((data) -> timecardLogic msg, bucket, userId, mode, jsonFileRead(data)).catch(
+                  (e) -> timecardLogic msg, bucket, userId, mode, JSON.parse("[]"))
+
+  timecardLogic = (msg, bucket, userId, mode, userDataJson) ->
+    console.log userDataJson
+    userName = '' + msg.message.user.name #文字列に変換
     nowDate = getDate()
     nowTime = getTime()
-    #userDataJson.sort (a, b) -> a.Date - b.Date
-    #console.log userFileJson
-
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
-      msg.send outRecord = "#{userName}さんの勤怠記録\n"
-      cosDA.doGetObject(bucket, createPath(userId)).then(
-        (data) -> msg.send "#{json.Date} 出社[#{json.AttendTime}] 退社[#{json.LeaveTime}]\n" for json in jsonFileRead(data)).catch()
-      return
-
+      massege = "#{userName}さんの勤怠記録\n"
+      massege += "#{json.Date} 出社[#{json.AttendTime}] 退社[#{json.LeaveTime}]\n" for json in userDataJson
     #打刻 出勤の場合、当日データが有れば追記、無ければ新規作成
-    if mode == "attend"
-      setAttendTime(bucket, createPath(userId), userId, userName, nowDate, nowTime)
+    else if mode == "attend"
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, nowTime, "")
+      jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん 出社時間#{nowTime}を登録しました"
     #打刻 退勤の場合、当日データが有れば追記、無ければ新規作成
     else if mode == "leave"
-      setLeaveTime(bucket, createPath(userId), userId, userName, nowDate, nowTime)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, "", nowTime)
+      jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん 退社時間#{nowTime}を登録しました"
     #打刻 削除の場合、該当日データを削除
     else if mode == "leave"
       deleteDate = msg.match[1]
-      deleteData(bucket, createPath(userId), deleteDate)
+      outputDataJson = deleteData(userDataJson, deleteDate)
+      jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん 退社時間#{nowTime}を登録しました"
     #修正 出勤の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_attend"
       modifyDate = msg.match[1]
       modifyTime = msg.match[2]
-      setAttendTime(bucket, createPath(userId), userId, userName, modifyDate, modifyTime)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, modifyTime, "")
+      jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の出社時間を#{modifyTime}に変更しました"
     #修正 退勤の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_leave"
       modifyDate = msg.match[1]
       modifyTime = msg.match[2]
-      setLeaveTime(bucket, createPath(userId), userId, userName, modifyDate, modifyTime)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", modifyTime)
+      jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の退社時間を#{modifyTime}に変更しました"
+    console.log outputDataJson
     msg.send massege

@@ -5,6 +5,7 @@
   "author": "t.yamaji",
   "description": "Slack bot.",
   "dependencies": {
+    "async": "^3.1.0",
     "hubot": "^3.3.2",
     "hubot-diagnostics": "^1.0.0",
     "hubot-google-images": "^0.2.7",
