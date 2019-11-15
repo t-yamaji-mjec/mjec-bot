@@ -35,16 +35,16 @@ module.exports = (robot) ->
   getDate = ->
     d = new Date
     d.setTime(d.getTime() + 1000*60*60*9) #JSTに変換
-    year = d.getFullYear()     # 年（西暦）
-    month = (d.getMonth() + 1) # 月
-    date = d.getDate()         # 日
+    year = d.getFullYear()                     # 年（西暦）
+    month = (" "+(d.getMonth() + 1)).slice(-2) # 月
+    date = (" "+d.getDate()).slice(-2)         # 日
     return "#{year}/#{month}/#{date}"
 
   getTime = ->
      d = new Date
      d.setTime(d.getTime() + 1000*60*60*9) #JSTに変換
-     hour = d.getHours()  # 時
-     min = d.getMinutes() # 分
+     hour = (" "+d.getHours()).slice(-2)  # 時
+     min = ("0"+d.getMinutes()).slice(-2) # 分
      return "#{hour}:#{min}"
 
   createNewData = (userId, userName, date, attendTime, leaveTime) ->
@@ -73,17 +73,21 @@ module.exports = (robot) ->
     CosDA.doCreateObject(bucket, path, JSON.stringify(json))
 
   setExistDateTime = (userDataJson, userId, userName, date, attendTime, leaveTime) ->
-    for json in userDataJson when json.Date == date
+    for json in userDataJson when json.Date.getTime() == date.getTime()
       if attendTime isnt "" then json.AttendTime = attendTime
       if leaveTime isnt "" then json.LeaveTime = leaveTime
       return userDataJson
     userDataJson.push(createNewData(userId, userName, date, attendTime, leaveTime))
     return userDataJson
+
   deleteData = (userDataJson, date) ->
     newUserData = userDataJson.filter (item, index) ->
-      if item.Date.toString() != date.toString()
+      if item.Date.getTime() != date.getTime()
         return true #削除対象の日付を除外
     return newUserData
+
+  sortdate = (a, b) ->
+    (new Date(a.Date)).getTime() - (new Date(b.Date)).getTime()
 
   #タイムカードメソッド(初期化)
   timecard = (msg, mode) ->
@@ -95,10 +99,11 @@ module.exports = (robot) ->
                   (e) -> timecardLogic msg, bucket, userId, mode, JSON.parse("[]"))
 
   timecardLogic = (msg, bucket, userId, mode, userDataJson) ->
-    console.log userDataJson
+    #console.log userDataJson
     userName = '' + msg.message.user.name #文字列に変換
     nowDate = getDate()
     nowTime = getTime()
+    if userDataJson then userDataJson.sort sortdate
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
       massege = "#{userName}さんの勤怠記録\n"
@@ -114,11 +119,11 @@ module.exports = (robot) ->
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん 退社時間#{nowTime}を登録しました"
     #打刻 削除の場合、該当日データを削除
-    else if mode == "leave"
+    else if mode == "delete"
       deleteDate = msg.match[1]
       outputDataJson = deleteData(userDataJson, deleteDate)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
-      massege = "#{userName}さん 退社時間#{nowTime}を登録しました"
+      massege = "#{userName}さん #{deleteDate}の打刻を削除しました"
     #修正 出勤の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_attend"
       modifyDate = msg.match[1]
@@ -133,5 +138,5 @@ module.exports = (robot) ->
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", modifyTime)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の退社時間を#{modifyTime}に変更しました"
-    console.log outputDataJson
+    #console.log outputDataJson
     msg.send massege
