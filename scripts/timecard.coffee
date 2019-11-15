@@ -73,7 +73,7 @@ module.exports = (robot) ->
     CosDA.doCreateObject(bucket, path, JSON.stringify(json))
 
   setExistDateTime = (userDataJson, userId, userName, date, attendTime, leaveTime) ->
-    for json in userDataJson when json.Date.getTime() == date.getTime()
+    for json in userDataJson when (new Date(json.Date)).getTime() == (new Date(date)).getTime()
       if attendTime isnt "" then json.AttendTime = attendTime
       if leaveTime isnt "" then json.LeaveTime = leaveTime
       return userDataJson
@@ -82,7 +82,7 @@ module.exports = (robot) ->
 
   deleteData = (userDataJson, date) ->
     newUserData = userDataJson.filter (item, index) ->
-      if item.Date.getTime() != date.getTime()
+      if (new Date(item.Date)).getTime() != (new Date(date)).getTime()
         return true #削除対象の日付を除外
     return newUserData
 
@@ -103,7 +103,7 @@ module.exports = (robot) ->
     userName = '' + msg.message.user.name #文字列に変換
     nowDate = getDate()
     nowTime = getTime()
-    if userDataJson then userDataJson.sort sortdate
+    if userDataJson.length > 1 then userDataJson.sort sortdate
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
       massege = "#{userName}さんの勤怠記録\n"
