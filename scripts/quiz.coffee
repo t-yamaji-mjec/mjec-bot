@@ -116,7 +116,7 @@ module.exports = (robot) ->
     #クイズ採点の場合、終了処理を行い採点結果を表示する
     else if mode == "scoring"
       settingJson.Enable = 0
-      massege = scoring(msg, settingJson)
+      massege = scoring(settingJson)
       outputSettingJson = settingJson
     #クイズに回答した場合、回答内容に対して採点を行い、続く場合は次の問題を出題する
     else if mode == "answer"
@@ -137,7 +137,8 @@ module.exports = (robot) ->
 
   decisionQuiz = (userId, userName, answer, setting, quizData) ->
     quiz = getQuiz(setting, quizData)
-    decision = if quiz[0].Reading is answer or quiz[0].Name is answer or quiz[0].EnglishName is answer then true else false
+    answerUpper = answer.toUpperCase()
+    decision = if quiz[0].Reading is answerUpper or quiz[0].Name.toUpperCase() is answerUpper or quiz[0].EnglishName.toUpperCase() is answerUpper then true else false
     userScore = setting.UserScore.filter (us) -> us.UserId is userId
     console.log userScore.length
     if userScore.length > 0
@@ -162,7 +163,7 @@ module.exports = (robot) ->
     return "第#{setting.QuestionIndex+1}問 #{quiz[0].Description}"
 
   scoring = (settingJson) ->
-    if settingJson.UserScore > 1 then settingJson.UserScore.sort sortScore
+    if settingJson.UserScore.length > 1 then settingJson.UserScore.sort sortScore
     massege = "【採点結果】\n"
     massege += "#{i+1}位：#{us.UserName} #{us.Score}点\n" for us,i in settingJson.UserScore
     return  massege
