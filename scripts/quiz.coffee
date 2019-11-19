@@ -2,10 +2,10 @@
 #   クイズ機能.
 #
 # Notes:
-#   用語の説明から回答を受け付けて採点する機能.
+#   用語の説明を出題して、回答を受け付けて採点する機能.
 #
 # Commands:
-#  クイズ (n:問題数) (n:分) - 特定のファイルから取得したクイズを出題する
+#  クイズ (問題数) - 特定のファイルから取得したクイズを出題する
 #  クイズ採点 - 現在実行中のクイズを採点する
 #  A:(回答) - クイズに回答する
 #
@@ -13,7 +13,7 @@ bucket = ""
 userRoom = ""
 CosDA = require('./cos_data_access')
 module.exports = (robot) ->
-  robot.hear /クイズ (\d+) (\d+)/i, (msg) ->
+  robot.hear /クイズ (\d+)/i, (msg) ->
     getSetting(msg, "question")
 
   robot.hear /クイズ採点/i, (msg) ->
@@ -51,18 +51,17 @@ module.exports = (robot) ->
       if arr.length >= count then return arr
     return arr
 
-  createNewSetting = (count, endTime, quizDataJson) ->
+  createNewSetting = (count, quizDataJson) ->
     json = getSettingBase()
     json["Enable"] = 1
     json["QuestionCount"] = count
-    json["EndTime"] = endTime
     json["QuestionIndex"] = 0
     json["QuestionData"] = createQuestionData(count, quizDataJson)
     json["UserScore"] = []
     return json
 
   getSettingBase = ->
-    JSON.parse('{ "Enable":"","QuestionCount":"", "EndTime":"", "QuestionIndex":"", "QuestionData":"", "UserScore":""}')
+    JSON.parse('{ "Enable":"","QuestionCount":"", "QuestionIndex":"", "QuestionData":"", "UserScore":""}')
 
   createUserScore = (userId, userName, score) ->
     json = getScoreBase()
@@ -99,40 +98,48 @@ module.exports = (robot) ->
     quizData.then((data) -> quizLogic msg, mode, settingJson, jsonFileRead(data)).catch(
                   (e) -> console.log e)
 
+  getQuiz = (setting, quizData) ->
+    index = setting.QuestionIndex
+    if setting.Enable is 1 and index < setting.QuestionCount
+      quiz = quizData.filter (data) -> data.No is setting.QuestionData[index]
+
   quizLogic = (msg, mode, settingJson, quizDataJson) ->
     #console.log settingJson
     #console.log quizDataJson
     userId = '' + msg.message.user.id #文字列に変換
     userName = '' + msg.message.user.name #文字列に変換
     nowTime = getJstTime()
+    outputSetting = settingJson
+    massege = ''
     #クイズ開始の場合、引数を基にクイズ用設定データを生成して１問目を出題する
     if mode == "question"
       count = Number(msg.match[1])
-      endTime = getEndTime(msg.match[2])
-      outputEndTime = outputTime(endTime)
-      outputSettingJson = createNewSetting(count, endTime, quizDataJson)
-      massege = "クイズを開始します。問題数：#{count} 終了時間：#{outputEndTime}\n"
-      massege += outputQuestion(outputSettingJson, quizDataJson)
+      massege += "クイズを開始します。問題数：#{count} \n"
+      {outSetting, outMassege} = outputQuestion(createNewSetting(count, quizDataJson), quizDataJson)
+      massege += outMassege
+      outputSetting = outSetting
     #クイズ採点の場合、終了処理を行い採点結果を表示する
     else if mode == "scoring"
-      settingJson.Enable = 0
-      massege = scoring(settingJson)
-      outputSettingJson = settingJson
+      {scorSetting, scorMassege} = scoring(settingJson)
+      massege += scorMassege
+      outputSetting = scorSetting
     #クイズに回答した場合、回答内容に対して採点を行い、続く場合は次の問題を出題する
     else if mode == "answer"
       if settingJson.Enable is 0 then return
       answer = msg.match[1]
-      {setting, result} = decisionQuiz(userId, userName, answer, settingJson, quizDataJson)
-      massege = result
-      console.log "index:#{setting.QuestionIndex}"
-      console.log "count:#{setting.QuestionCount}"
-      if setting.QuestionIndex is setting.QuestionCount
-        setting.Enable = 0
-        massege += scoring(setting)
+      {decSetting, decMassege} = decisionQuiz(userId, userName, answer, settingJson, quizDataJson)
+      massege += decMassege
+      #console.log "index:#{setting.QuestionIndex}"
+      #console.log "count:#{setting.QuestionCount}"
+      if decSetting.QuestionIndex is decSetting.QuestionCount
+        {scorSetting, scorMassege} = scoring(decSetting)
+        massege += scorMassege
+        outputSetting = scorSetting
       else
-        massege += outputQuestion(setting, quizDataJson)
-      outputSettingJson = setting
-    jsonFileWrite(bucket, createSettingPath(userRoom), outputSettingJson)
+        {outSetting, outMassege} = outputQuestion(decSetting, quizDataJson)
+        massege += outMassege
+        outputSetting = outSetting
+    jsonFileWrite(bucket, createSettingPath(userRoom), outputSetting)
     msg.send massege
 
   decisionQuiz = (userId, userName, answer, setting, quizData) ->
@@ -140,7 +147,7 @@ module.exports = (robot) ->
     answerUpper = answer.toUpperCase()
     decision = if quiz[0].Reading is answerUpper or quiz[0].Name.toUpperCase() is answerUpper or quiz[0].EnglishName.toUpperCase() is answerUpper then true else false
     userScore = setting.UserScore.filter (us) -> us.UserId is userId
-    console.log userScore.length
+    #console.log "length:#{userScore.length}"
     if userScore.length > 0
       for us in setting.UserScore when us.UserId is userId
         if decision then us.Score = us.Score + 1
@@ -149,21 +156,19 @@ module.exports = (robot) ->
       setting.UserScore.push(createUserScore(userId, userName, firstScore))
     setting.QuestionIndex = setting.QuestionIndex + 1
     if decision
-      return {setting, result:"〇：#{quiz[0].Name} (#{quiz[0].EnglishName}) #{quiz[0].Description}\n\n"}
+      decMassege = "〇：#{quiz[0].Name} (#{quiz[0].EnglishName}) #{quiz[0].Description}\n\n"
     else
-      return {setting, result:"×：#{quiz[0].Name}(#{quiz[0].EnglishName})#{quiz[0].Description}\n\n"}
-
-  getQuiz = (setting, quizData) ->
-    index = setting.QuestionIndex
-    if setting.Enable is 1 and index < setting.QuestionCount
-      quiz = quizData.filter (data) -> data.No is setting.QuestionData[index]
+      decMassege = "×：#{quiz[0].Name} (#{quiz[0].EnglishName}) #{quiz[0].Description}\n\n"
+    return {decSetting:setting, decMassege}
 
   outputQuestion = (setting, quizData) ->
     quiz = getQuiz(setting, quizData)
-    return "第#{setting.QuestionIndex+1}問 #{quiz[0].Description}"
+    outMassege = "第#{setting.QuestionIndex+1}問 #{quiz[0].Description}"
+    return {outSetting:setting, outMassege}
 
-  scoring = (settingJson) ->
-    if settingJson.UserScore.length > 1 then settingJson.UserScore.sort sortScore
-    massege = "【採点結果】\n"
-    massege += "#{i+1}位：#{us.UserName} #{us.Score}点\n" for us,i in settingJson.UserScore
-    return  massege
+  scoring = (setting) ->
+    setting.Enable = 0
+    if setting.UserScore.length > 1 then setting.UserScore.sort sortScore
+    scorMassege = "【採点結果】\n"
+    scorMassege += "#{i+1}位：#{us.UserName} #{us.Score}点\n" for us,i in setting.UserScore
+    return {scorSetting:setting, scorMassege}
