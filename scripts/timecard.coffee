@@ -135,8 +135,9 @@ module.exports = (robot) ->
     if userDataJson.length > 1 then userDataJson.sort sortdate
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
-      massege = "#{userName}さんの勤怠記録\n"
+      massege = "```#{userName}さんの勤怠記録\n"
       massege += "#{getOutputDate(json.Date)} 出社[#{getOutputTime(json.AttendTime)}] 退社[#{getOutputTime(json.LeaveTime)}] 備考[#{json.Note}]\n" for json in userDataJson
+      massege += "```"
     #打刻出勤の場合、当日データが有れば追記、無ければ新規作成
     else if mode == "attend"
       outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, nowTime, "", "")
