@@ -40,18 +40,39 @@ module.exports = (robot) ->
   robot.hear /勤怠確認/i, (msg) ->
     timecard(msg, "record")
 
-  getDate = (date) ->
-    if date.toString() is "Invalid Date" then return ''
-    year = date.getFullYear()                     # 年（西暦）
-    month = (" " + (date.getMonth() + 1)).slice(-2) # 月
-    date = (" " + date.getDate()).slice(-2)         # 日
-    return "#{year}/#{month}/#{date}"
+  getNowDate = (date) ->
+    d = new Date
+    d.setTime((d.getTime() + 1000*60*60*9)) #JSTに変換
+    year = d.getFullYear()   # 年（西暦）
+    month = d.getMonth() + 1 # 月
+    day =  d.getDate()       # 日
+    return outputDate(year, month, day)
 
-  getTime = (date) ->
-    if date.toString() is "Invalid Date" then return ''
-    hour = (" "+ date.getHours()).slice(-2)  # 時
-    min = ("0" + date.getMinutes()).slice(-2) # 分
+  getNowTime = (date) ->
+    d = new Date
+    d.setTime((d.getTime() + 1000*60*60*9)) #JSTに変換
+    hour = d.getHours() # 時
+    min = d.getMinutes() # 分
     return "#{hour}:#{min}"
+
+  outputDate = (year, month, day) ->
+    outputMonth = (" " + month).slice(-2) # 月
+    outputDay = (" " + day).slice(-2)     # 日
+    return "#{year}/#{outputMonth}/#{outputDay}"
+
+  outputTime = (hour, min) ->
+    outputHour = (" " + hour).slice(-2)  # 時
+    outputMin = ("0" + min).slice(-2) # 分
+    return "#{outputHour}:#{outputMin}"
+
+  getOutputDate = (strDate) ->
+    arr = strDate.split(/\//)
+    outputDate(arr[0], arr[1], arr[2])
+
+  getOutputTime = (strTime) ->
+    if strTime is "" then return "     "
+    arr = strTime.split(/:/)
+    outputTime(arr[0], arr[1])
 
   createNewData = (userId, userName, date, attendTime, leaveTime, note) ->
     json = getTimeCardBase()
@@ -109,15 +130,14 @@ module.exports = (robot) ->
   timecardLogic = (msg, bucket, userId, mode, userDataJson) ->
     #console.log userDataJson
     userName = '' + msg.message.user.name #文字列に変換
-    d = new Date
-    jstTime = d.setTime((d.getTime() + 1000*60*60*9)) #JSTに変換
-    nowDate = getDate(new Date(jstTime))
-    nowTime = getTime(new Date(jstTime))
+    nowDate = getNowDate()
+    nowTime = getNowTime()
     if userDataJson.length > 1 then userDataJson.sort sortdate
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
+      anyDate = "2000/01/01 "
       massege = "#{userName}さんの勤怠記録\n"
-      massege += "#{getDate(new Date(json.Date))} 出社[#{getTime(new Date(json.AttendTime))}] 退社[#{getTime(new Date(json.LeaveTime))}] 備考[#{json.Note}]\n" for json in userDataJson
+      massege = "#{getOutputDate(json.Date)} 出社[#{getOutputTime(json.AttendTime)}] 退社[#{getOutputTime(json.LeaveTime)}] 備考[#{json.Note}]\n" for json in userDataJson
     #打刻出勤の場合、当日データが有れば追記、無ければ新規作成
     else if mode == "attend"
       outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, nowTime, "", "")
