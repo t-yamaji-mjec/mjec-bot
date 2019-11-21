@@ -15,6 +15,7 @@
 #  勤怠確認 [YYYY/MM] - 指定した月の勤怠記録を出力する
 #
 CosDA = require('./cos_data_access')
+strEnpty = "空欄"
 module.exports = (robot) ->
   robot.hear /打刻出社/i, (msg) ->
     timecard(msg, "attend")
@@ -97,9 +98,9 @@ module.exports = (robot) ->
     CosDA.doCreateObject(bucket, path, JSON.stringify(json))
 
   setExistDateTime = (userDataJson, userId, userName, date, attendTime, leaveTime, note) ->
-    if typeof attendTime is "undefined" then attendTime = "" #空文字列を引数にしても強制的にundefinedとなる為、空文字列をセットする
-    if typeof leaveTime is "undefined" then leaveTime = "" #空文字列を引数にしても強制的にundefinedとなる為、空文字列をセットする
-    if typeof note is "undefined" then note = "" #空文字列を引数にしても強制的にundefinedとなる為、空文字列をセットする
+    if attendTime is strEnpty then attendTime = ""
+    if leaveTime is strEnpty then leaveTime = ""
+    if note is strEnpty then note = ""
     for json in userDataJson when (new Date(json.Date)).getTime() == (new Date(date)).getTime()
       console.log (new Date(json.Date)).getTime()
       console.log (new Date(date)).getTime()
@@ -137,7 +138,6 @@ module.exports = (robot) ->
     userName = '' + msg.message.user.name #文字列に変換
     nowDate = getNowDate()
     nowTime = getNowTime()
-    strEnpty = "空欄"
     if userDataJson.length > 1 then userDataJson.sort sortdate
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
@@ -170,22 +170,22 @@ module.exports = (robot) ->
     #修正出勤の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_attend"
       modifyDate = msg.match[1]
-      modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then "" else msg.match[2]
+      modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, modifyTime, null, null)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
-      massege = "#{userName}さん #{modifyDate}の出社時間を#{(modifyTime ? strEnpty)}に変更しました"
+      massege = "#{userName}さん #{modifyDate}の出社時間を#{(modifyTime)}に変更しました"
     #修正退勤の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_leave"
       modifyDate = msg.match[1]
-      modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then "" else msg.match[2]
+      modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, null, modifyTime, null)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
-      massege = "#{userName}さん #{modifyDate}の退社時間を#{(modifyTime ? strEnpty)}に変更しました"
+      massege = "#{userName}さん #{modifyDate}の退社時間を#{(modifyTime)}に変更しました"
     else if mode == "modify_note"
       modifyDate = msg.match[1]
-      modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then "" else msg.match[2]
+      modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, null, null, modifyNote)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
-      massege = "#{userName}さん #{modifyDate}の備考を#{(modifyNote ? strEnpty)}に変更しました"
+      massege = "#{userName}さん #{modifyDate}の備考を#{(modifyNote)}に変更しました"
     #console.log outputDataJson
     msg.send massege
