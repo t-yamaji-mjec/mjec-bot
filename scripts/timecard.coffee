@@ -7,12 +7,12 @@
 # Commands:
 #  打刻出社 - 当日の出社時間を記録する
 #  打刻退社 - 当日の退社時間を記録する
-#  打刻退社 (備考) - 当日の備考を記録する
+#  打刻退社 [備考] - 当日の備考を記録する
 #  打刻削除 [YYYY/MM/DD] - 指定した日の打刻を削除する
 #  修正出社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の出社時間を修正する ※DELは内容をクリアします
 #  修正退社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の退社時間を修正する ※DELは内容をクリアします
-#  修正備考 [YYYY/MM/DD] (備考 or DEL) - 指定した日時の備考を修正する ※DELは内容をクリアします
-#  勤怠確認  - 勤怠記録を出力する ※将来的に当月指定などを入れる予定
+#  修正備考 [YYYY/MM/DD] [備考 or DEL] - 指定した日時の備考を修正する ※DELは内容をクリアします
+#  勤怠確認 [YYYY/MM] - 指定した月の勤怠記録を出力する
 #
 CosDA = require('./cos_data_access')
 module.exports = (robot) ->
@@ -28,16 +28,16 @@ module.exports = (robot) ->
   robot.hear /打刻削除 (\d+\D+\d+\D+\d+)/i, (msg) ->
     timecard(msg, "delete")
 
-  robot.hear /修正出社 (\d+\D+\d+\D+\d+) [(\d+:\d+)|DEL]/i, (msg) ->
+  robot.hear /修正出社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)/i, (msg) ->
     timecard(msg, "modify_attend")
 
-  robot.hear /修正退社 (\d+\D+\d+\D+\d+) [(\d+:\d+)|DEL]/i, (msg) ->
+  robot.hear /修正退社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)/i, (msg) ->
     timecard(msg, "modify_leave")
 
-  robot.hear /修正備考 (\d+\D+\d+\D+\d+) [(.*)|DEL]/i, (msg) ->
+  robot.hear /修正備考 (\d+\D+\d+\D+\d+) ((.*)|DEL)/i, (msg) ->
     timecard(msg, "modify_note")
 
-  robot.hear /勤怠確認/i, (msg) ->
+  robot.hear /勤怠確認 (\d+\D+\d+)/i, (msg) ->
     timecard(msg, "record")
 
   getNowDate = ->
@@ -56,23 +56,19 @@ module.exports = (robot) ->
     return outputTime(hour,min)
 
   outputDate = (year, month, day) ->
-    outputMonth = (" " + month).slice(-2) # 月
-    outputDay = (" " + day).slice(-2)     # 日
-    return "#{year}/#{outputMonth}/#{outputDay}"
+    return "#{year}/#{month}/#{day}"
 
   outputTime = (hour, min) ->
-    outputHour = (" " + hour).slice(-2)  # 時
-    outputMin = ("0" + min).slice(-2) # 分
-    return "#{outputHour}:#{outputMin}"
+    return "#{hour}:#{min}"
 
   getOutputDate = (strDate) ->
     arr = strDate.split(/\//)
-    outputDate(arr[0], arr[1], arr[2])
+    outputDate(arr[0], (" " + arr[1]).slice(-2), (" " + arr[2]).slice(-2))
 
   getOutputTime = (strTime) ->
     if strTime is "" then return "     "
     arr = strTime.split(/:/)
-    outputTime(arr[0], arr[1])
+    outputTime((" " + arr[0]).slice(-2), ("0" + arr[1]).slice(-2))
 
   createNewData = (userId, userName, date, attendTime, leaveTime, note) ->
     json = getTimeCardBase()
@@ -134,6 +130,9 @@ module.exports = (robot) ->
     userData.then((data) -> timecardLogic msg, bucket, userId, mode, jsonFileRead(data)).catch(
                   (e) -> timecardLogic msg, bucket, userId, mode, JSON.parse("[]"))
 
+  getYearMonth = (date) ->
+    /^(\d+)\D+(\d+)/.exec(date)[0]
+
   timecardLogic = (msg, bucket, userId, mode, userDataJson) ->
     #console.log userDataJson
     userName = '' + msg.message.user.name #文字列に変換
@@ -143,23 +142,24 @@ module.exports = (robot) ->
     if userDataJson.length > 1 then userDataJson.sort sortdate
     #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
     if mode == "record"
+      ym = msg.match[1]
       massege = "```#{userName}さんの勤怠記録\n"
-      massege += "#{getOutputDate(json.Date)} 出社[#{getOutputTime(json.AttendTime)}] 退社[#{getOutputTime(json.LeaveTime)}] 備考[#{json.Note}]\n" for json in userDataJson
+      massege += "#{getOutputDate(json.Date)} 出社[#{getOutputTime(json.AttendTime)}] 退社[#{getOutputTime(json.LeaveTime)}] 備考[#{json.Note}]\n" for json in userDataJson when getYearMonth(json.Date) is ym
       massege += "```"
     #打刻出勤の場合、当日データが有れば追記、無ければ新規作成
     else if mode == "attend"
-      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, nowTime, null, null)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, nowTime, "", "")
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
-      massege = "#{userName}さん 出社時間に#{nowTime}を登録しました"
+      massege = "#{userName}さん 出社時間に#{getOutputTime(nowTime)}を登録しました"
     #打刻退勤の場合、当日データが有れば追記、無ければ新規作成
     else if mode == "leave"
-      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, null, nowTime, null)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, "", nowTime, "")
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
-      massege = "#{userName}さん 退社時間に#{nowTime}を登録しました"
+      massege = "#{userName}さん 退社時間に#{getOutputTime(nowTime)}を登録しました"
     #打刻備考の場合、当日データが有れば追記、無ければ新規作成
     else if mode == "note"
       note = msg.match[1]
-      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, null, null, note)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, nowDate, "", "", note)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん 備考に#{note}を登録しました"
     #打刻削除の場合、該当日データを削除
@@ -172,20 +172,20 @@ module.exports = (robot) ->
     else if mode == "modify_attend"
       modifyDate = msg.match[1]
       modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then "" else msg.match[2]
-      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, modifyTime, null, null)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, modifyTime, "", "")
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の出社時間を#{(modifyTime ? strEnpty)}に変更しました"
     #修正退勤の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_leave"
       modifyDate = msg.match[1]
       modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then "" else msg.match[2]
-      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, null, modifyTime, null)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", modifyTime, "")
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の退社時間を#{(modifyTime ? strEnpty)}に変更しました"
     else if mode == "modify_note"
       modifyDate = msg.match[1]
       modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then "" else msg.match[2]
-      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, null, null, modifyNote)
+      outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", "", modifyNote)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の備考を#{(modifyNote ? strEnpty)}に変更しました"
     #console.log outputDataJson
