@@ -7,7 +7,7 @@
 # Commands:
 #  クイズ (問題数) - 特定のファイルから取得したクイズを出題する
 #  クイズ採点 - 現在実行中のクイズを採点する
-#  A:(回答) - クイズに回答する
+#  A:(回答) - クイズに回答する、読み方(カナ)、名称、英名で受け付ける
 #
 bucket = ""
 userRoom = ""
@@ -47,15 +47,17 @@ module.exports = (robot) ->
   getSettingBase = ->
     JSON.parse('{ "Enable":"","QuestionCount":"", "QuestionIndex":"", "QuestionData":"", "UserScore":""}')
 
-  createUserScore = (userId, userName, score) ->
+  createUserScore = (userId, userName, score, correct, mistake) ->
     json = getScoreBase()
     json["UserId"] = userId
     json["UserName"] = userName
     json["Score"] = score
+    json["Correct"] = correct
+    json["Mistake"] = mistake
     return json
 
   getScoreBase = ->
-    JSON.parse('{"UserId":"","UserName":"","Score":""}')
+    JSON.parse('{"UserId":"","UserName":"","Score":"","Correct":"","Mistake":""}')
 
   createSettingPath = (userRoom) ->
     "quiz_#{userRoom}.json"
@@ -133,10 +135,13 @@ module.exports = (robot) ->
     #console.log "length:#{userScore.length}"
     if userScore.length > 0
       for us in setting.UserScore when us.UserId is userId
-        if decision then us.Score = us.Score + 1
+        if decision then us.Correct += 1 else us.Mistake += 1
+        us.Score = us.Correct - us.Mistake
     else
-      firstScore = if decision then 1 else 0
-      setting.UserScore.push(createUserScore(userId, userName, firstScore))
+      score = correct = mistake = 0
+      if decision then correct = 1 else mistake = 1
+      score = correct - mistake
+      setting.UserScore.push(createUserScore(userId, userName, score, correct, mistake))
     setting.QuestionIndex = setting.QuestionIndex + 1
     if decision
       decMassege = "〇：#{quiz[0].Name} (#{quiz[0].EnglishName}) #{quiz[0].Description}\n\n"
@@ -153,5 +158,5 @@ module.exports = (robot) ->
     setting.Enable = 0
     if setting.UserScore.length > 1 then setting.UserScore.sort sortScore
     scorMassege = "【採点結果】\n"
-    scorMassege += "#{i+1}位：#{us.UserName} #{us.Score}点\n" for us,i in setting.UserScore
+    scorMassege += "#{i+1}位：#{us.UserName} #{us.Score}点 正解：#{us.Correct} 不正解：#{us.Mistake}\n" for us,i in setting.UserScore
     return {scorSetting:setting, scorMassege}
