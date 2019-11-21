@@ -87,7 +87,7 @@ module.exports = (robot) ->
 
   getTimeCardBase = ->
     try
-      JSON.parse('{"UserId":null,"UserName":null,"Date":null,"AttendTime":null,"LeaveTime":null,"Note":null}')
+      JSON.parse('{"UserId":"","UserName":"","Date":"","AttendTime":"","LeaveTime":"","Note":""}')
     catch e
       console.log e
 
