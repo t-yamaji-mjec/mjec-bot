@@ -22,22 +22,6 @@ module.exports = (robot) ->
   robot.hear /A:(.*)/i, (msg) ->
     getSetting(msg, "answer")
 
-  getJstTime = ->
-     d = new Date
-     d.setTime(d.getTime() + 1000*60*60*9 ) #JSTに変換 + 指定時間を加算
-     return d
-
-  getEndTime = (addTime) ->
-     jst = getJstTime()
-     jst.setTime(jst.getTime() + (1000*60*addTime)) #指定時間分を加算
-     return jst
-
-  outputTime = (time) ->
-     hour = (" "+time.getHours()).slice(-2)  # 時
-     min = ("0"+time.getMinutes()).slice(-2) # 分
-     sec = ("0"+time.getSeconds()).slice(-2) # 秒
-     return "#{hour}:#{min}:#{sec}"
-
   createRandomNumber = (maxNumber) ->
     Math.floor(Math.random() * maxNumber)
 
@@ -108,7 +92,6 @@ module.exports = (robot) ->
     #console.log quizDataJson
     userId = '' + msg.message.user.id #文字列に変換
     userName = '' + msg.message.user.name #文字列に変換
-    nowTime = getJstTime()
     outputSetting = settingJson
     massege = ''
     #クイズ開始の場合、引数を基にクイズ用設定データを生成して１問目を出題する
