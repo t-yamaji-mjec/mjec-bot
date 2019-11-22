@@ -47,26 +47,33 @@ CosDA = (function() {
       }).promise();
   };
 
+  CosDA.doListObjects = function(bucket) {
+    console.log('Listing object');
+    return cos.listObjects({
+        Bucket: bucket
+    }).promise();
+  };
+
   return CosDA;
 })();
 
 module.exports = function(robot) {
   var cos_da = new CosDA(robot);
   var bucket = process.env['BUCKET_NAME'];
-  var path = 'test.txt';
+  var path = 'test/test.txt';
   robot.hear(/put test (.*)/i, function(msg) {
-    cos_da.doCreateObject(bucket, path, body=msg.match[1]);
+    CosDA.doCreateObject(bucket, path, body=msg.match[1]);
   });
   robot.hear(/get test/i, function(msg) {
-    cos_da.doGetObject(bucket, path).then((data) => {
+    CosDA.doGetObject(bucket, path).then((data) => {
       msg.send('body:' + Buffer.from(data.Body).toString())
     });
   });
   robot.hear(/del test/i, function(msg) {
-    cos_da.doDeleteObject(bucket, path);
+    CosDA.doDeleteObject(bucket, path);
   });
   robot.hear(/list test/i, function(msg) {
-    cos_da.getBucketContents(bucket).then((data) => {
+    CosDA.doListObjects(bucket).then((data) => {
       if (data != null && data.Contents != null) {
         for (var i = 0; i < data.Contents.length; i++) {
           var itemKey = data.Contents[i].Key;
