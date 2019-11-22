@@ -23,34 +23,43 @@ CosDA = (function() {
   var cos = new objectStore.S3(config);
 
   CosDA.doCreateObject = function(bucket, path, body) {
-      console.log('Creating object');
-      return cos.putObject({
-          Bucket: bucket,
-          Key: path,
-          Body: body
-        }).promise();
+    console.log('Creating object');
+    return cos.putObject({
+      Bucket: bucket,
+      Key: path,
+      Body: body
+    }).promise();
   };
 
   CosDA.doGetObject = function(bucket, path) {
-   console.log('Getting object');
-   return cos.getObject({
-     Bucket: bucket,
-     Key: path
-   }).promise();
+    console.log('Getting object');
+    return cos.getObject({
+      Bucket: bucket,
+      Key: path
+    }).promise();
   };
 
   CosDA.doDeleteObject = function(bucket, path) {
-      console.log('Deleting object');
-      return cos.deleteObject({
-          Bucket: bucket,
-          Key: path
-      }).promise();
+    console.log('Deleting object');
+    return cos.deleteObject({
+      Bucket: bucket,
+      Key: path
+    }).promise();
   };
 
   CosDA.doListObjects = function(bucket) {
     console.log('Listing object');
     return cos.listObjects({
-        Bucket: bucket
+      Bucket: bucket
+    }).promise();
+  };
+
+  CosDA.doCopyObject = function(bucket, copyPath, pastePath) {
+    console.log('Copying object');
+    return cos.copyObject({
+      Bucket: bucket,
+      CopySource: copyPath,
+      Key: pastePath
     }).promise();
   };
 
@@ -60,7 +69,7 @@ CosDA = (function() {
 module.exports = function(robot) {
   var cos_da = new CosDA(robot);
   var bucket = process.env['BUCKET_NAME'];
-  var path = 'test/test.txt';
+  var path = 'test.txt';
   robot.hear(/put test (.*)/i, function(msg) {
     CosDA.doCreateObject(bucket, path, body=msg.match[1]);
   });
@@ -71,6 +80,9 @@ module.exports = function(robot) {
   });
   robot.hear(/del test/i, function(msg) {
     CosDA.doDeleteObject(bucket, path);
+  });
+  robot.hear(/copy test/i, function(msg) {
+    CosDA.doCopyObject(bucket, bucket + "/" + path, "copy/test.txt");
   });
   robot.hear(/list test/i, function(msg) {
     CosDA.doListObjects(bucket).then((data) => {
