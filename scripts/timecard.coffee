@@ -14,7 +14,7 @@
 #  修正備考 [YYYY/MM/DD] [備考 or DEL] - 指定した日時の備考を修正する ※DELは内容をクリアします
 #  勤怠確認 [YYYY/MM] - 指定した月の勤怠記録を出力する
 #
-CosDA = require('./cos_data_access')
+CosDA = require('./_cos_data_access')
 strEnpty = "空欄"
 module.exports = (robot) ->
   robot.hear /打刻出社/i, (msg) ->
@@ -89,7 +89,7 @@ module.exports = (robot) ->
       console.log e
 
   createPath = (userId) ->
-    "timecard_#{userId}.json"
+    "data/timecard_#{userId}.json"
 
   jsonFileRead = (data) ->
     JSON.parse(Buffer.from(data.Body).toString()) if data isnt null

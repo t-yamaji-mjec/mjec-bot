@@ -11,7 +11,7 @@
 #
 bucket = ""
 userRoom = ""
-CosDA = require('./cos_data_access')
+CosDA = require('./_cos_data_access')
 module.exports = (robot) ->
   robot.hear /クイズ (\d+)/i, (msg) ->
     getSetting(msg, "question")
@@ -60,7 +60,7 @@ module.exports = (robot) ->
     JSON.parse('{"UserId":"","UserName":"","Score":"","Correct":"","Mistake":""}')
 
   createSettingPath = (userRoom) ->
-    "quiz_#{userRoom}.json"
+    "data/quiz_#{userRoom}.json"
 
   jsonFileRead = (data) ->
     JSON.parse(Buffer.from(data.Body).toString()) if data isnt null
@@ -80,7 +80,7 @@ module.exports = (robot) ->
                      (e) -> getQuizData msg, mode, "")
 
   getQuizData = (msg, mode, settingJson) ->
-    quizData = CosDA.doGetObject(bucket, "quiz_question_data.json") #Promiseを返却
+    quizData = CosDA.doGetObject(bucket, "data/quiz_question_data.json") #Promiseを返却
     quizData.then((data) -> quizLogic msg, mode, settingJson, jsonFileRead(data)).catch(
                   (e) -> console.log e)
 
