@@ -48,8 +48,22 @@ module.exports = (robot) ->
       console.log "filePath:#{filePath}"
       if filePath?
         filePromise = CosDA.doGetObject(Bucket, filePath)
-        filePromise.then((data) -> getContentsAttached msg, data.Body).catch(
+        filePromise.then((data) -> getContentsAttached msg, filePath.split("/").pop(), data.Body).catch(
                          (e) -> console.log e)
 
-  getContentsAttached = (msg, data) ->
-    msg.send data
+  getContentsAttached = (msg, fileName, body) ->
+    request = require("request")
+    options = {
+      token: process.env['HUBOT_SLACK_TOKEN']
+      filename: fileName,
+      file: body,
+      channels: '' + msg.message.user.room
+    }
+    request.post
+     url:'https://slack.com/api/files.upload'
+     formData: options
+    , (error, response, body) ->
+      if !error and response.statusCode is 200
+        console.log('ok');
+      else
+        console.log('status code: ' + response.statusCode);
