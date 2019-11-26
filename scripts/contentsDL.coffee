@@ -37,15 +37,19 @@ module.exports = (robot) ->
 
   getContentsFile = (msg, fileList) ->
     if fileList isnt null and fileList.Contents isnt null
-      selectNo = msg.match[1]
+      selectNo = parseInt(msg.match[1])
+      console.log "selectNo:#{selectNo}"
       regexp1 = new RegExp("^contents\/.*")
       outputNo = 0
       for content in fileList.Contents when regexp1.test(content.Key) and content.Size isnt 0
         outputNo += 1
-        filePath = if outputNo is selectNo then content.Key
-      filePromise = CosDA.doGetObject(Bucket, filePath ? "")
-      filePromise.then((data) -> getContentsAttached msg, data).catch(
-                       (e) -> console.log e)
+        if outputNo is selectNo
+          filePath = content.Key
+      console.log "filePath:#{filePath}"
+      if filePath?
+        filePromise = CosDA.doGetObject(Bucket, filePath)
+        filePromise.then((data) -> getContentsAttached msg, data.Body).catch(
+                         (e) -> console.log e)
 
   getContentsAttached = (msg, data) ->
     msg.send data
