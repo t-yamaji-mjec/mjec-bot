@@ -52,18 +52,20 @@ module.exports = (robot) ->
                          (e) -> console.log e)
 
   getContentsAttached = (msg, fileName, body) ->
-    request = require("request")
-    options = {
-      token: process.env['HUBOT_SLACK_TOKEN']
-      filename: fileName,
-      file: body,
-      channels: '' + msg.message.user.room
-    }
-    request.post
-     url:'https://slack.com/api/files.upload'
-     formData: options
-    , (error, response, body) ->
-      if !error and response.statusCode is 200
-        console.log('ok');
+    #console.log body
+    buf = new Buffer(body)
+    tmpPath = "tmp/#{fileName}"
+    Fs = require('fs')
+    Fs.writeFile tmpPath, buf, (err) ->
+      if err
+        console.log 'ファイルのコピーに失敗しました...'
       else
-        console.log('status code: ' + response.statusCode);
+        request = require("request")
+        url = 'https://slack.com/api/files.upload'
+        data =
+          token: process.env['HUBOT_SLACK_TOKEN']
+          filename: fileName
+          file: Fs.createReadStream(tmpPath)
+          channels: '' + msg.message.user.room
+        request.post {url: url, formData: data}, (error, response, body) ->
+          if error then console.log('status code: ' + response.statusCode);
