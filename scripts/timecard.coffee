@@ -31,9 +31,8 @@ module.exports = (robot) ->
 
   robot.hear /打刻備考 (.*)$/i, (msg) ->
     if /(\d+\D+\d+\D+\d+)/.test(msg.match[1])
-      timecard(msg, "modify_note2") #備考だけは引数を制限時に日付が付加されてしまうので専用モードを作る
     else
-      timecard(msg, "note")
+       timecard(msg, "note")
   robot.hear /打刻備考 (\d+\D+\d+\D+\d+) ((.*)|DEL)$/i, (msg) ->
     timecard(msg, "modify_note")
 
@@ -113,7 +112,7 @@ module.exports = (robot) ->
       if attendTime isnt "" then json.AttendTime = attendTime
       if leaveTime isnt "" then json.LeaveTime = leaveTime
       if note isnt "" then json.Note = note
-      console.log userDataJson
+      #console.log userDataJson
       return userDataJson
     userDataJson.push(createNewData(userId, userName, date, attendTime, leaveTime, note))
     return userDataJson
@@ -188,14 +187,9 @@ module.exports = (robot) ->
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の退社時間を#{(modifyTime)}に変更しました"
     #打刻備考(日付有り)の場合、該当日データが有れば追記、無ければ何もしない
-    else if mode == "modify_note" or mode == "modify_note2"
-      if "modify_note"
-        modifyDate = msg.match[1]
-        modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
-      else
-        note = (''+msg.match[1]).replace(/^(\d+\D+\d+\D+\d+)/i, "").trim()
-        modifyDate = /^(\d+\D+\d+\D+\d+)/.exec(msg.match[1])[0]
-        modifyNote = if note.toUpperCase() is "DEL" then strEnpty else note
+    else if mode == "modify_note"
+      modifyDate = msg.match[1]
+      modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", "", modifyNote)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の備考を#{(modifyNote)}に変更しました"
