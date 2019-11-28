@@ -6,39 +6,43 @@
 #
 # Commands:
 #  打刻出社 - 当日の出社時間を記録する
+#  打刻出社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の出社時間を修正する ※DELは内容をクリアします
 #  打刻退社 - 当日の退社時間を記録する
-#  打刻退社 [備考] - 当日の備考を記録する
+#  打刻退社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の退社時間を修正する ※DELは内容をクリアします
+#  打刻備考 [備考] - 当日の備考を記録する
+#  打刻備考 [YYYY/MM/DD] [備考 or DEL] - 指定した日時の備考を修正する ※DELは内容をクリアします
 #  打刻削除 [YYYY/MM/DD] - 指定した日の打刻を削除する
-#  修正出社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の出社時間を修正する ※DELは内容をクリアします
-#  修正退社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の退社時間を修正する ※DELは内容をクリアします
-#  修正備考 [YYYY/MM/DD] [備考 or DEL] - 指定した日時の備考を修正する ※DELは内容をクリアします
+#  勤怠確認 - 当月の勤怠記録を出力する
 #  勤怠確認 [YYYY/MM] - 指定した月の勤怠記録を出力する
 #
 CosDA = require('./_cos_data_access')
 strEnpty = "空欄"
 module.exports = (robot) ->
-  robot.hear /打刻出社/i, (msg) ->
+
+  robot.hear /打刻出社$/i, (msg) ->
     timecard(msg, "attend")
-
-  robot.hear /打刻退社/i, (msg) ->
-    timecard(msg, "leave")
-
-  robot.hear /打刻備考 (.*)/i, (msg) ->
-    timecard(msg, "note")
-
-  robot.hear /打刻削除 (\d+\D+\d+\D+\d+)/i, (msg) ->
-    timecard(msg, "delete")
-
-  robot.hear /修正出社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)/i, (msg) ->
+  robot.hear /打刻出社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_attend")
 
-  robot.hear /修正退社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)/i, (msg) ->
+  robot.hear /打刻退社$/i, (msg) ->
+    timecard(msg, "leave")
+  robot.hear /打刻退社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_leave")
 
-  robot.hear /修正備考 (\d+\D+\d+\D+\d+) ((.*)|DEL)/i, (msg) ->
+  robot.hear /打刻備考 (.*)$/i, (msg) ->
+    if /(\d+\D+\d+\D+\d+)/.test(msg.match[1])
+      timecard(msg, "modify_note2") #備考だけは引数を制限時に日付が付加されてしまうので専用モードを作る
+    else
+      timecard(msg, "note")
+  robot.hear /打刻備考 (\d+\D+\d+\D+\d+) ((.*)|DEL)$/i, (msg) ->
     timecard(msg, "modify_note")
 
-  robot.hear /勤怠確認 (\d+\D+\d+)/i, (msg) ->
+  robot.hear /打刻削除 (\d+\D+\d+\D+\d+)$/i, (msg) ->
+    timecard(msg, "delete")
+
+  robot.hear /勤怠確認$/i, (msg) ->
+    timecard(msg, "record_now")
+  robot.hear /勤怠確認 (\d+\D+\d+)$/i, (msg) ->
     timecard(msg, "record")
 
   getNowDate = ->
@@ -141,9 +145,9 @@ module.exports = (robot) ->
     nowDate = getNowDate()
     nowTime = getNowTime()
     if userDataJson.length > 1 then userDataJson.sort sortdate
-    #勤怠記録の場合、該当ユーザーの勤怠記録を出力して終了
-    if mode == "record"
-      ym = msg.match[1]
+    #勤怠記録の場合、ユーザーの該当月勤怠記録を出力して終了
+    if mode == "record" or mode == "record_now"
+      ym = if mode is "record_now" then getYearMonth(nowDate) else msg.match[1]
       massege = "```#{userName}さんの勤怠記録\n"
       massege += "#{getOutputDate(json.Date)} 出社[#{getOutputTime(json.AttendTime)}] 退社[#{getOutputTime(json.LeaveTime)}] 備考[#{json.Note}]\n" for json in userDataJson when getYearMonth(json.Date) is ym
       massege += "```"
@@ -169,23 +173,29 @@ module.exports = (robot) ->
       outputDataJson = deleteData(userDataJson, deleteDate)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{deleteDate}の打刻を削除しました"
-    #修正出勤の場合、該当日データが有れば追記、無ければ何もしない
+    #打刻出社(日時有り)の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_attend"
       modifyDate = msg.match[1]
       modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, modifyTime, "", "")
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の出社時間を#{(modifyTime)}に変更しました"
-    #修正退勤の場合、該当日データが有れば追記、無ければ何もしない
+    #打刻退社(日時有り)の場合、該当日データが有れば追記、無ければ何もしない
     else if mode == "modify_leave"
       modifyDate = msg.match[1]
       modifyTime = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", modifyTime, "")
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の退社時間を#{(modifyTime)}に変更しました"
-    else if mode == "modify_note"
-      modifyDate = msg.match[1]
-      modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
+    #打刻備考(日付有り)の場合、該当日データが有れば追記、無ければ何もしない
+    else if mode == "modify_note" or mode == "modify_note2"
+      if "modify_note"
+        modifyDate = msg.match[1]
+        modifyNote = if ('' + msg.match[2]).toUpperCase() is "DEL" then strEnpty else msg.match[2]
+      else
+        note = (''+msg.match[1]).replace(/^(\d+\D+\d+\D+\d+)/i, "").trim()
+        modifyDate = /^(\d+\D+\d+\D+\d+)/.exec(msg.match[1])[0]
+        modifyNote = if note.toUpperCase() is "DEL" then strEnpty else note
       outputDataJson = setExistDateTime(userDataJson, userId, userName, modifyDate, "", "", modifyNote)
       jsonFileWrite(bucket, createPath(userId), outputDataJson)
       massege = "#{userName}さん #{modifyDate}の備考を#{(modifyNote)}に変更しました"
