@@ -21,27 +21,27 @@ module.exports = (robot) ->
 
   robot.hear /打刻出社$/i, (msg) ->
     timecard(msg, "attend")
-  robot.hear /打刻出社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)$/i, (msg) ->
+  robot.hear /打刻出社\s(\d+\D+\d+\D+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_attend")
 
   robot.hear /打刻退社$/i, (msg) ->
     timecard(msg, "leave")
-  robot.hear /打刻退社 (\d+\D+\d+\D+\d+) ((\d+:\d+)|DEL)$/i, (msg) ->
+  robot.hear /打刻退社\s(\d+\D+\d+\D+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_leave")
 
-  robot.hear /打刻備考 (.*)$/i, (msg) ->
+  robot.hear /打刻備考\s(.*)$/i, (msg) ->
     if /(\d+\D+\d+\D+\d+)/.test(msg.match[1])
     else
        timecard(msg, "note")
-  robot.hear /打刻備考 (\d+\D+\d+\D+\d+) ((.*)|DEL)$/i, (msg) ->
+  robot.hear /打刻備考\s(\d+\D+\d+\D+\d+)\s((.*)|DEL)$/i, (msg) ->
     timecard(msg, "modify_note")
 
-  robot.hear /打刻削除 (\d+\D+\d+\D+\d+)$/i, (msg) ->
+  robot.hear /打刻削除\s(\d+\D+\d+\D+\d+)$/i, (msg) ->
     timecard(msg, "delete")
 
   robot.hear /勤怠確認$/i, (msg) ->
     timecard(msg, "record_now")
-  robot.hear /勤怠確認 (\d+\D+\d+)$/i, (msg) ->
+  robot.hear /勤怠確認\s(\d+\D+\d+)$/i, (msg) ->
     timecard(msg, "record")
 
   getNowDate = ->

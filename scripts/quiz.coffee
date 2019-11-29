@@ -13,7 +13,7 @@ bucket = ""
 userRoom = ""
 CosDA = require('./_cos_data_access')
 module.exports = (robot) ->
-  robot.hear /クイズ (\d+)/i, (msg) ->
+  robot.hear /クイズ\s(\d+)/i, (msg) ->
     getSetting(msg, "question")
 
   robot.hear /クイズ採点/i, (msg) ->

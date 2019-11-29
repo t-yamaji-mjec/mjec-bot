@@ -15,7 +15,7 @@ module.exports = (robot) ->
   robot.hear /コンテンツリスト/i, (msg) ->
     getContents(msg, "list")
 
-  robot.hear /コンテンツ (\d+)/i, (msg) ->
+  robot.hear /コンテンツ\s(\d+)/i, (msg) ->
     getContents(msg, "download")
 
   getContents = (msg, mode) ->

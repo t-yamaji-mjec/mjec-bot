@@ -5,7 +5,7 @@
 #   定期と手動で実行するバックアップとその内容でリストアする.
 #
 # Commands:
-#  バックアップ - 手動バックアップを作成する
+#  バックアップ 手動 - 手動バックアップを作成する
 #  リストア [定期 or 手動] - 定期：定期保存ファイルからリストアする、手動：バックアップコマンドで保存したファイルからリストアする
 #
 CosDA = require('./_cos_data_access')
@@ -18,10 +18,10 @@ module.exports = (robot) ->
     backup(robot, "regular")
   ).start()
 
-  robot.respond /バックアップ/i, (msg) ->
+  robot.respond /バックアップ\s手動/i, (msg) ->
     backup(msg, "manual")
 
-  robot.respond /リストア (定期|手動)/i, (msg) ->
+  robot.respond /リストア\s(定期|手動)/i, (msg) ->
     mode = if msg.match[1] is "定期" then "regular" else "manual"
     restore(msg, mode)
 
