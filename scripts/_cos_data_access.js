@@ -70,6 +70,7 @@ module.exports = function(robot) {
   var cos_da = new CosDA(robot);
   var bucket = process.env['BUCKET_NAME'];
   var path = 'test.txt';
+/* テスト用
   robot.hear(/put test (.*)/i, function(msg) {
     CosDA.doCreateObject(bucket, path, body=msg.match[1]);
   });
@@ -95,5 +96,6 @@ module.exports = function(robot) {
       }
     });
   });
+*/
   return module.exports = CosDA;
 };
