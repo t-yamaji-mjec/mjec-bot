@@ -36,11 +36,12 @@ module.exports = (robot) ->
     return arr
 
   createNewSetting = (count, quizDataJson) ->
+    arr = createQuestionData(count, quizDataJson)
     json = getSettingBase()
     json["Enable"] = 1
-    json["QuestionCount"] = count
+    json["QuestionCount"] = arr.length
     json["QuestionIndex"] = 0
-    json["QuestionData"] = createQuestionData(count, quizDataJson)
+    json["QuestionData"] = arr
     json["UserScore"] = []
     return json
 
@@ -99,8 +100,8 @@ module.exports = (robot) ->
     #クイズ開始の場合、引数を基にクイズ用設定データを生成して１問目を出題する
     if mode == "question"
       count = Number(msg.match[1])
-      massege += "クイズを開始します。問題数：#{count} \n"
       {outSetting, outMassege} = outputQuestion(createNewSetting(count, quizDataJson), quizDataJson)
+      massege += "クイズを開始します。問題数：#{outSetting.QuestionData.length} \n"
       massege += outMassege
       outputSetting = outSetting
     #クイズ採点の場合、終了処理を行い採点結果を表示する
