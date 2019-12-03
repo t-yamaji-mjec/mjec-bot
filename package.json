@@ -20,7 +20,6 @@
     "hubot-shipit": "^0.2.1",
     "hubot-slack": "^4.7.1",
     "ibm-cos-sdk": "^1.5.4",
-    "memory-streams": "^0.1.3",
     "mktemp": "^1.0.0"
   },
   "engines": {
