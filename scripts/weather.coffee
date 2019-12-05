@@ -14,7 +14,7 @@ module.exports = (robot) ->
   robot.hear /天気エリア/i, (msg) ->
     GetWeatherArea(msg, "area")
 
-  robot.hear /天気 (.*)/i, (msg) ->
+  robot.hear /天気\s(.*)/i, (msg) ->
     GetWeatherArea(msg, "weather")
 
   JsonFileRead = (data) ->
