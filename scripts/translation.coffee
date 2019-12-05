@@ -35,8 +35,8 @@ module.exports = (robot) ->
     msg.send massege
 
   robot.hear /翻訳[A-Za-z]{2}-[A-Za-z]{2}\s(.*)/i, (msg) ->
-    model = /[A-Za-z]{2}-[A-Za-z]{2}/.exec(res.match.input)[0]
-    original = res.match[1]
+    model = /[A-Za-z]{2}-[A-Za-z]{2}/.exec(msg.match.input)[0]
+    original = msg.match[1]
     request.post
       auth:
         user: 'apikey'
