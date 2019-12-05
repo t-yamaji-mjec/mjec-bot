@@ -1,16 +1,15 @@
 # Description:
 #   翻訳機能.
 #
-# Notes:
-#
+# Commands:
 #  翻訳[model] [text]
 #
-#  (例)日→英翻訳。
-#  翻訳ja-en サンプルテキスト
+# Notes:
+#  (例)日→英翻訳。翻訳ja-en サンプルテキスト
 #
 module.exports = (robot) ->
   request = require("request")
-  robot.hear /翻訳[A-Za-z]{2}-[A-Za-z]{2}\s(.*)/i, (res) -> 
+  robot.hear /翻訳[A-Za-z]{2}-[A-Za-z]{2}\s(.*)/i, (res) ->
     #console.log res
     model = /[A-Za-z]{2}-[A-Za-z]{2}/.exec(res.match.input)[0]
     original = res.match[1]

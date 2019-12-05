@@ -1,14 +1,9 @@
 # Description:
-#   Catme is the most important thing in life
-#
-# Dependencies:
-#   None
-#
-# Configuration:
-#   None
+#   猫を表示(非公開機能)
 #
 # Commands:
-#   hubot cat me - Receive a cat
+#   cat me - 猫を表示
+#
 module.exports = (robot) ->
   robot.respond /cat me/i, (msg) ->
     request = require("request")

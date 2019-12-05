@@ -28,5 +28,8 @@ module.exports = (robot) ->
     massege += "> 　A:[回答] - クイズに回答する、読み方(カナ)、名称、英名で受け付ける \n\n"
     massege += ">【静的コンテンツダウンロード機能】\n"
     massege += "> 　コンテンツリスト - 特定フォルダにあるファイルの一覧(No)を表示する\n"
-    massege += "> 　コンテンツ [No] - 選択したファイルをSlack上に添付する\n"
+    massege += "> 　コンテンツ [No] - 選択したファイルをSlack上に添付する\n\n"
+    massege += ">【天気予報機能】\n"
+    massege += "> 　天気エリア - 対象となるエリアの一覧(Name,ID)を出力する\n"
+    massege += "> 　天気 [都市名 or 都市ID] - 対象都市の今日、明日、明後日の天気を表示する\n\n"
     msg.send massege
