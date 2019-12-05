@@ -10,8 +10,8 @@
 module.exports = (robot) ->
   robot.respond /ヘルプ|コマンド/i, (msg) ->
     massege =  ">【翻訳機能】\n"
-    massege += "> 　翻訳[model] [翻訳したい文字列] - [model]は以下を参照 \n"
-    massege += "> 　https://cloud.ibm.com/docs/services/language-translator?topic=language-translator-translation-models&locale=ja#japanese \n\n"
+    massege += "> 　翻訳リスト [言語] - modelの一覧を表示する ※言語は省略可能\n"
+    massege += "> 　翻訳[model] [翻訳したい文字列] - [model]は翻訳リストのコマンドを参照 \n\n"
     massege += ">【タイムカード機能】\n"
     massege += "> 　打刻出社 - 当日の出社時間を記録する \n"
     massege += "> 　打刻出社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の出社時間を修正する ※DELは内容をクリアします \n"
