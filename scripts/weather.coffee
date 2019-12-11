@@ -76,6 +76,6 @@ module.exports = (robot) ->
           massege += "【#{res.title}】\n"
           massege += CreateForecastsMassege("今　日", res.forecasts[0])
           massege += CreateForecastsMassege("明　日", res.forecasts[1])
-          massege += CreateForecastsMassege("明後日", res.forecasts[2])
+          if res.forecasts[2]? then massege += CreateForecastsMassege("明後日", res.forecasts[2])
           massege += "\n#{res.description.text}\n"
           msg.send massege
