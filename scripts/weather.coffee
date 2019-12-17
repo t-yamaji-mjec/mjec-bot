@@ -5,16 +5,19 @@
 #  Livedoor Weather Web Service から天気予報を取得して出力する。
 #
 # Commands:
-#  天気エリア - 対象となるエリアの一覧(Name,ID)を出力する
+#  天気エリア [都道府県名] - 対象となるエリアの一覧(Name,ID)を出力する ※[都道府県名]は省略可能
 #  天気 [都市名 or 都市ID] - 対象都市の今日、明日、明後日の天気を表示する
 #
 bucket = ""
 CosDA = require('./_cos_data_access')
 module.exports = (robot) ->
-  robot.hear /天気エリア/i, (msg) ->
+  robot.hear /天気エリア$/i, (msg) ->
     GetWeatherArea(msg, "area")
 
-  robot.hear /天気\s(.*)/i, (msg) ->
+  robot.hear /天気エリア\s(.*)$/i, (msg) ->
+    GetWeatherArea(msg, "area_search")
+
+  robot.hear /天気\s(.*)$/i, (msg) ->
     GetWeatherArea(msg, "weather")
 
   JsonFileRead = (data) ->
@@ -54,16 +57,24 @@ module.exports = (robot) ->
     minCelsius = if forecasts.temperature.min is null then "ー" else forecasts.temperature.min.celsius
     return "#{dayText}： #{ResponseIcon(forecasts.telop)} (#{forecasts.telop})　:thermometer:気温：最高#{maxCelsius}度　最低#{minCelsius}度\n"
 
-  WeatherLogic = (msg, mode, weatherArea) ->
+  GetAreaList = (weatherArea, prefecture) ->
+    regexp = new RegExp("#{prefecture}")
     massege = ''
-    if mode is "area"
-      for wa in weatherArea
+    for wa in weatherArea
+      if prefecture is "" or regexp.test(wa.Prefecture)
         massege += "【#{wa.Prefecture}】\n"
         massege += "  都市ID：#{city.ID}　都市名：#{city.Name}\n" for city in wa.City
-      msg.send massege
+    return massege
+
+  WeatherLogic = (msg, mode, weatherArea) ->
+    if mode is "area"
+      msg.send GetAreaList(weatherArea,"")
+    else if mode is "area_search"
+      msg.send GetAreaList(weatherArea,msg.match[1])
     else if mode is "weather"
       request = require("request")
       args = msg.match[1]
+      massege = ''
       for wa in weatherArea
         reqID = city.ID for city in wa.City when city.Name is args or city.ID is args
       if reqID?
