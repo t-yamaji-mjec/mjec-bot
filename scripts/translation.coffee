@@ -1,12 +1,12 @@
 # Description:
-#   翻訳機能.
+#  翻訳機能.
+#
+# Notes:
+#  Language Translator-zw から翻訳結果を取得する.
 #
 # Commands:
 #  翻訳リスト [言語] - modelの一覧を表示する ※言語は省略可能
 #  翻訳[model] [翻訳したい文] - modelは翻訳リストのコマンドを参照
-#
-# Notes:
-#  (例)日→英翻訳。翻訳ja-en サンプルテキスト
 #
 module.exports = (robot) ->
   request = require("request")
