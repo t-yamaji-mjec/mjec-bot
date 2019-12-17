@@ -12,8 +12,8 @@
 #  打刻備考 [備考] - 当日の備考を記録する
 #  打刻備考 [YYYY/MM/DD] [備考 or DEL] - 指定した日時の備考を修正する ※DELは内容をクリアします
 #  打刻削除 [YYYY/MM/DD] - 指定した日の打刻を削除する
-#  勤怠確認 - 当月の勤怠記録を出力する
-#  勤怠確認 [YYYY/MM] - 指定した月の勤怠記録を出力する
+#  打刻確認 - 当月の勤怠記録を出力する
+#  打刻確認 [YYYY/MM] - 指定した月の勤怠記録を出力する
 #
 CosDA = require('./_cos_data_access')
 strEnpty = "空欄"
@@ -39,9 +39,9 @@ module.exports = (robot) ->
   robot.hear /打刻削除\s(\d+\D+\d+\D+\d+)$/i, (msg) ->
     timecard(msg, "delete")
 
-  robot.hear /勤怠確認$/i, (msg) ->
+  robot.hear /打刻確認$/i, (msg) ->
     timecard(msg, "record_now")
-  robot.hear /勤怠確認\s(\d+\D+\d+)$/i, (msg) ->
+  robot.hear /打刻確認\s(\d+\D+\d+)$/i, (msg) ->
     timecard(msg, "record")
 
   getNowDate = ->
