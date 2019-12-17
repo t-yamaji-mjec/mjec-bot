@@ -30,6 +30,9 @@ module.exports = (robot) ->
     massege += "> 　コンテンツリスト - 特定フォルダにあるファイルの一覧(No)を表示する\n"
     massege += "> 　コンテンツ [No] - 選択したファイルをSlack上に添付する\n\n"
     massege += ">【天気予報機能】\n"
-    massege += "> 　天気エリア - 対象となるエリアの一覧(Name,ID)を出力する\n"
+    massege += "> 　天気エリア [都道府県名] - 対象となるエリアの一覧(Name,ID)を出力する ※[都道府県名]は省略可能\n"
     massege += "> 　天気 [都市名 or 都市ID] - 対象都市の今日、明日、明後日の天気を表示する\n\n"
+    massege += ">【画像検索機能】\n"
+    massege += "> 　画像検索 [名詞] - Pixabay APIを呼び出して画像を検索する\n\n"
+
     msg.send massege
