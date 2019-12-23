@@ -23,7 +23,7 @@ module.exports = (robot) ->
     channel = process.env['SLACK_CHANNEL']
     option = "?token=#{token}&channel=#{channel}&pretty=1"
     if delCount is 0
-      current_ts = int(datetime.now().strftime('%s')) #現在のタイムスタンプ
+      current_ts = Math.floor(new Date().getTime() / 1000) #現在のタイムスタンプ
       oneDayTime = 60 * 60 * 24 * 1
       latest = current_ts - oneDayTime
       option += "&latest=#{latest}"
@@ -39,8 +39,6 @@ module.exports = (robot) ->
           cnt += 1
           deleteMessage(msg, message.ts)
           if cnt is delCount then break
-    if msg.message?.user?.room?
-      msg.send "BOTメッセージを削除しました。"
 
   deleteMessage = (msg, ts) ->
     request = require("request")
