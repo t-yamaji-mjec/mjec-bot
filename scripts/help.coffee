@@ -36,5 +36,5 @@ module.exports = (robot) ->
     massege += "> 　画像検索　[名詞] - 画像をランダム検索する\n"
     massege += "> 　画像検索N　[名詞] - 画像を検索する(未編集)\n\n"
     massege += ">【メッセージ削除機能】\n"
-    massege += "> 　メッセージ削除 [削除件数] - BOTの発言を削除する ※前日以前のメッセージを自動削除する\n\n"
+    massege += "> 　メッセージ削除 [削除件数] - BOTの発言を削除する\n\n"
     msg.send massege
