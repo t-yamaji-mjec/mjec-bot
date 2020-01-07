@@ -109,9 +109,9 @@ module.exports = (robot) ->
       if leaveTime is strEnpty then json.LeaveTime = ""
       if note is strEnpty then json.Note = ""
       #空文字でないなら入力値
-      if attendTime isnt "" then json.AttendTime = attendTime
-      if leaveTime isnt "" then json.LeaveTime = leaveTime
-      if note isnt "" then json.Note = note
+      if attendTime isnt "" and attendTime isnt strEnpty then json.AttendTime = attendTime
+      if leaveTime isnt "" and leaveTime isnt strEnpty then json.LeaveTime = leaveTime
+      if note isnt "" and note isnt strEnpty then json.Note = note
       #console.log userDataJson
       return userDataJson
     userDataJson.push(createNewData(userId, userName, date, attendTime, leaveTime, note))
