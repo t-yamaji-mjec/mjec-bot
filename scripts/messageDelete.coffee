@@ -9,7 +9,11 @@
 #
 cronJob = require('cron').CronJob
 module.exports = (robot) ->
-  robot.hear /メッセージ削除\s(\d+)/i, (msg) ->
+
+  robot.hear /メッセージ削除$/i, (msg) ->
+    getMessageHistory(msg, 1)
+
+  robot.hear /メッセージ削除\s(\d+)$/i, (msg) ->
     getMessageHistory(msg, Number(msg.match[1]))
 
   getMessageHistory = (msg, delCount) ->
