@@ -100,6 +100,7 @@ module.exports = (robot) ->
     #クイズ開始の場合、引数を基にクイズ用設定データを生成して１問目を出題する
     if mode == "question"
       count = Number(msg.match[1])
+      if count > 10 then count = 10 #クイズの問題数を制限する
       {outSetting, outMassege} = outputQuestion(createNewSetting(count, quizDataJson), quizDataJson)
       massege += "クイズを開始します。問題数：#{outSetting.QuestionData.length} \n"
       massege += outMassege
