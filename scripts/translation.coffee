@@ -34,9 +34,16 @@ module.exports = (robot) ->
       if lang is "" or regexp.test(ml.Description) then massege += "Model：#{ml.Model}　説明：#{ml.Description}\n"
     msg.send massege
 
-  robot.hear /翻訳[A-Za-z]{2}-[A-Za-z]{2}\s(.*)/i, (msg) ->
+  robot.hear /翻訳\s(.*)$/i, (msg) ->
+    original = msg.match[1]
+    Translation(msg, 'en-ja', original)
+
+  robot.hear /翻訳[A-Za-z]{2}-[A-Za-z]{2}\s(.*)$/i, (msg) ->
     model = /[A-Za-z]{2}-[A-Za-z]{2}/.exec(msg.match.input)[0]
     original = msg.match[1]
+    Translation(msg, model, original)
+
+  Translation = (msg, model, original) ->
     request.post
       auth:
         user: 'apikey'
