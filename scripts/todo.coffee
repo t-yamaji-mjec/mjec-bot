@@ -6,8 +6,8 @@
 #
 # Commands:
 #  作業開始 [作業名] - 新しく開始した作業を記録する
-#  作業開始 [番号] [作業名] - 指定した作業名を修正する
 #  作業終了 [番号] - 指定した作業を終了する
+#  作業中断 [番号] - 指定した作業を中断する
 #  作業削除 [番号] - 指定した作業を削除する
 #  作業一覧 - 当日の作業一覧を出力する
 #  作業一覧 [YYYY/MM/DD] - 指定した日付の作業一覧を出力する
@@ -16,7 +16,6 @@
 CosDA = require('./_cos_data_access')
 strEnpty = "空欄"
 module.exports = (robot) ->
-
   robot.hear /作業開始\s(.*)$/i, (msg) ->
     todo(msg, "start")
   robot.hear /作業終了\s(\d)$/i, (msg) ->
@@ -30,7 +29,7 @@ module.exports = (robot) ->
   robot.hear /作業一覧\s(\d+\D+\d+\D+\d+)$/i, (msg) ->
     todo(msg, "record")
   robot.hear /作業管理$/i, (msg) ->
-    manage(msg)
+    manage(msg, "manage")
 
 #[日付処理用ライブラリ]-----------------------------------------------------------
   getNowDateTime = ->
@@ -46,14 +45,18 @@ module.exports = (robot) ->
   outputDateTime = (year, month, day, hour, min) ->
     return "#{year}/#{month}/#{day} #{hour}:#{min}"
 
-  getOutputDateTime = (strDate) ->
-    arr = strDate.split(/\//)
-    outputDate(arr[0], (" " + arr[1]).slice(-2), (" " + arr[2]).slice(-2))
+  twoSlice = (data) -> (" " + data).slice(-2)
 
-  getOutputTime = (strTime) ->
-    if strTime is "" then return "     "
-    arr = strTime.split(/:/)
-    outputTime((" " + arr[0]).slice(-2), ("0" + arr[1]).slice(-2))
+  getOutputDateTime = (strDateTime) ->
+    if strDateTime is "" then return ""
+    arr = strDateTime.split ' '
+    dateArr = arr[0].split(/\//)
+    timeArr = arr[1].split(/:/)
+    return "#{dateArr[0]}/#{twoSlice(dateArr[1])}/#{twoSlice(dateArr[2])} #{twoSlice(timeArr[0])}:#{twoSlice(timeArr[1])}"
+
+  getOutputDate = (strDate) ->
+    dateArr = strDate.split(/\//)
+    return "#{dateArr[0]}/#{twoSlice(dateArr[1])}/#{twoSlice(dateArr[2])}"
 
   getDateString = (date) -> /^(\d+\D+\d+\D+\d+)/.exec(date)[0]
 
@@ -68,10 +71,12 @@ module.exports = (robot) ->
 
   setNextDate = (date) -> date + (24 * 60 * 60 * 1000)
 #-------------------------------------------------------------------------------
-
 #[ファイルIO用ライブラリ]---------------------------------------------------------
   createTodoPath = (userId) ->
     "data/todo_#{userId}.json"
+
+  createTodoRoomPath = (room) ->
+    "data/todo_room_#{room}.json"
 
   jsonFileRead = (data) ->
     JSON.parse(Buffer.from(data.Body).toString()) if data isnt null
@@ -79,6 +84,7 @@ module.exports = (robot) ->
   jsonFileWrite = (bucket, path, json) ->
     CosDA.doCreateObject(bucket, path, JSON.stringify(json))
 #-------------------------------------------------------------------------------
+
   createNewTodo = (userId, userName, sequence, taskName, stratDateTime) ->
     json = getTodoBase()
     json["UserId"] = userId
@@ -98,7 +104,6 @@ module.exports = (robot) ->
       console.log e
 
   todo = (msg, mode) ->
-    path = require('path')
     userId = '' + msg.message.user.id #文字列に変換
     bucket = process.env['BUCKET_NAME']
     userData = CosDA.doGetObject(bucket, createTodoPath(userId)) #Promiseを返却
@@ -126,10 +131,8 @@ module.exports = (robot) ->
       else
         judgeDate = tryGetDate(msg.match[1], getDateString(nowDateTime))
         outputDate = msg.match[1]
-      for json in userDataJson when json.UserId is userId
-        if json.Suspend is 1 then json.EndDateTime = "中断"
-      massege = "```#{userName}さんの作業一覧(#{outputDate})\n"
-      massege += "(#{json.Sequence}) #{json.TaskName} [#{json.StratDateTime}] ～ [#{json.EndDateTime}]\n" for json in userDataJson when json.UserId is userId and
+      massege = "```#{userName}さんの作業一覧(#{getOutputDate(outputDate)})\n"
+      massege += "(#{json.Sequence}) #{json.TaskName}\n     [#{getOutputDateTime(json.StratDateTime)}] ～ [#{setEndDateTime(json)}]\n" for json in userDataJson when json.UserId is userId and
         getDate(json.StratDateTime) < setNextDate(judgeDate) and
         tryGetDate(json.EndDateTime, judgeDate) >= judgeDate
       massege += "```"
@@ -140,22 +143,24 @@ module.exports = (robot) ->
       newSequence = getNewSequence(userDataJson, userId)
       userDataJson.push(createNewTodo(userId, userName, newSequence, taskName, nowDateTime))
       jsonFileWrite(bucket, createTodoPath(userId), userDataJson)
-      return sendMassege(msg, "#{userName}さん (#{newSequence})に #{taskName} を登録しました")
+      sendMassege(msg, "#{userName}さん (#{newSequence})に #{taskName} を登録しました")
     #作業終了の場合、該当作業に終了日時を入れる
     else if mode == "end"
       outputDataJson = updTask(userDataJson, userId, sequence, 0, nowDateTime)
       jsonFileWrite(bucket, createTodoPath(userId), outputDataJson)
-      return sendMassege(msg, "#{userName}さん #{taskName} が終了しました")
+      sendMassege(msg, "#{userName}さん #{taskName} が終了しました")
     #作業中断の場合、該当作業に中断フラグを入れる
     else if mode == "suspend"
       outputDataJson = updTask(userDataJson, userId, sequence, 1, "")
       jsonFileWrite(bucket, createTodoPath(userId), outputDataJson)
-      return sendMassege(msg, "#{userName}さん #{taskName} を中断しました")
+      sendMassege(msg, "#{userName}さん #{taskName} を中断しました")
     #作業削除の場合、該当作業を削除
     else if mode == "delete"
       outputDataJson = delTask(userDataJson, userId, sequence)
       jsonFileWrite(bucket, createTodoPath(userId), outputDataJson)
-      return sendMassege(msg, "#{userName}さん #{taskName} を削除しました")
+      sendMassege(msg, "#{userName}さん #{taskName} を削除しました")
+    #作業を更新した場合、管理用ファイルに登録する
+    manage(msg,mode)
     #console.log outputDataJson
 
   sendMassege = (msg, massege) -> msg.send massege
@@ -187,3 +192,59 @@ module.exports = (robot) ->
     for json in userDataJson when json.UserId == userId and json.Sequence == sequence
       return json.TaskName
     return null
+
+  setEndDateTime = (json) ->
+    if json.Suspend is 1 then "中断" else getOutputDateTime(json.EndDateTime)
+
+#[管理者機能]--------------------------------------------------------------------
+  createNewManage = (userId, filePath) ->
+    json = getManageBase()
+    json["UserId"] = userId
+    json["FilePath"] = filePath
+    console.log json
+    return json
+
+  getManageBase = ->
+    try
+      JSON.parse('{"UserId":"","FilePath":""}')
+    catch e
+      console.log e
+
+  manageDataRead = (bucket, filePath) ->
+    bucket = process.env['BUCKET_NAME']
+    return CosDA.doGetObject(bucket, filePath) #Promiseを返却
+
+  manage = (msg, mode) ->
+    userRoom = '' + msg.message.user.room
+    bucket = process.env['BUCKET_NAME']
+    manageData = CosDA.doGetObject(bucket, createTodoRoomPath(userRoom)) #Promiseを返却
+    manageData.then((data) -> manageLogic msg, bucket, userRoom, mode, jsonFileRead(data)).catch(
+                  (e) -> manageLogic msg, bucket, userRoom, mode, JSON.parse("[]"))
+
+  manageLogic = (msg, bucket, userRoom, mode, manageDataJson) ->
+    #作業管理の場合は、チャンネル内の未終了作業を一覧出力する
+    if mode is "manage"
+      dataList = []
+      promiseList = []
+      pathList = []
+      pathList.push(json.FilePath) for json in manageDataJson
+      for path in pathList
+        promiseList.push(manageDataRead(bucket, path))
+      Promise.all(promiseList).then((resultList) ->
+        massege = "```【作業状況】\n"
+        for result in resultList
+          userDataJson = jsonFileRead(result)
+          massege += "#{userDataJson[0].UserName}さんの残作業----------------------------------------------\n"
+          massege += "(#{json.Sequence}) #{json.TaskName}\n     [#{getOutputDateTime(json.StratDateTime)}] ～ [#{setEndDateTime(json)}]\n" for json in userDataJson when tryGetDate(json.EndDateTime, null) is null
+        massege += "```"
+        sendMassege(msg, massege)
+      )
+    #作業管理リスト表示で無い場合は追加登録
+    else
+      userId = '' + msg.message.user.id #文字列に変換
+      manageDataJson = manageDataJson.filter (item, index) ->
+        if item.UserId == userId then return true
+      if manageDataJson.length < 1
+        manageDataJson.push(createNewManage(userId, createTodoPath(userId)))
+        jsonFileWrite(bucket, createTodoRoomPath(userRoom), manageDataJson)
+#-------------------------------------------------------------------------------
