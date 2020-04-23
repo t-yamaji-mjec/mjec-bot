@@ -26,7 +26,7 @@ module.exports = (robot) ->
     todo(msg, "delete")
   robot.hear /作業一覧$/i, (msg) ->
     todo(msg, "record_now")
-  robot.hear /作業一覧\s(\d+\D+\d+\D+\d+)$/i, (msg) ->
+  robot.hear /作業一覧\s(\d+\/+\d+\/+\d+)$/i, (msg) ->
     todo(msg, "record")
   robot.hear /作業管理$/i, (msg) ->
     manage(msg, "manage")
@@ -58,13 +58,13 @@ module.exports = (robot) ->
     dateArr = strDate.split(/\//)
     return "#{dateArr[0]}/#{twoSlice(dateArr[1])}/#{twoSlice(dateArr[2])}"
 
-  getDateString = (date) -> /^(\d+\D+\d+\D+\d+)/.exec(date)[0]
+  getDateString = (date) -> /^(\d+\/+\d+\/+\d+)/.exec(date)[0]
 
   getDate = (date) -> return (new Date(getDateString(date))).getTime()
 
   tryGetDate = (date, defult) ->
     try
-      dateStr = /^(\d+\D+\d+\D+\d+)/.exec(date)[0]
+      dateStr = /^(\d+\/+\d+\/+\d+)/.exec(date)[0]
       return (new Date(dateStr)).getTime()
     catch
       return defult
@@ -143,7 +143,7 @@ module.exports = (robot) ->
       newSequence = getNewSequence(userDataJson, userId)
       userDataJson.push(createNewTodo(userId, userName, newSequence, taskName, nowDateTime))
       jsonFileWrite(bucket, createTodoPath(userId), userDataJson)
-      sendMassege(msg, "#{userName}さん (#{newSequence})に #{taskName} を登録しました")
+      sendMassege(msg, "#{userName}さん (#{newSequence})に #{taskName} を開始しました")
     #作業終了の場合、該当作業に終了日時を入れる
     else if mode == "end"
       outputDataJson = updTask(userDataJson, userId, sequence, 0, nowDateTime)
