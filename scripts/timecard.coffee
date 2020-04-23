@@ -5,9 +5,9 @@
 #   ユーザー毎に出社、退社時間を記録して、出力出来る機能
 #
 # Commands:
-#  打刻出社 - 当日の出社時間を記録する
+#  打刻出社 - 当日の出社時間を記録する ※カスタム絵文字[:出社:]でも同様に反応する
 #  打刻出社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の出社時間を修正する ※DELは内容をクリアします
-#  打刻退社 - 当日の退社時間を記録する
+#  打刻退社 - 当日の退社時間を記録する ※カスタム絵文字[:退社:]でも同様に反応する
 #  打刻退社 [YYYY/MM/DD] [hh:mm or DEL] - 指定した日時の退社時間を修正する ※DELは内容をクリアします
 #  打刻備考 [備考] - 当日の備考を記録する
 #  打刻備考 [YYYY/MM/DD] [備考 or DEL] - 指定した日時の備考を修正する ※DELは内容をクリアします
@@ -19,29 +19,29 @@ CosDA = require('./_cos_data_access')
 strEnpty = "空欄"
 module.exports = (robot) ->
 
-  robot.hear /打刻出社$/i, (msg) ->
+  robot.hear /(打刻出社|:出社:)$/i, (msg) ->
     timecard(msg, "attend")
-  robot.hear /打刻出社\s(\d+\D+\d+\D+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
+  robot.hear /打刻出社\s(\d+\/+\d+\/+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_attend")
 
-  robot.hear /打刻退社$/i, (msg) ->
+  robot.hear /(打刻退社|:退社:)$/i, (msg) ->
     timecard(msg, "leave")
-  robot.hear /打刻退社\s(\d+\D+\d+\D+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
+  robot.hear /打刻退社\s(\d+\/+\d+\/+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_leave")
 
   robot.hear /打刻備考\s(.*)$/i, (msg) ->
-    if /(\d+\D+\d+\D+\d+)/.test(msg.match[1])
+    if /(\d+\/+\d+\/+\d+)/.test(msg.match[1])
     else
        timecard(msg, "note")
-  robot.hear /打刻備考\s(\d+\D+\d+\D+\d+)\s((.*)|DEL)$/i, (msg) ->
+  robot.hear /打刻備考\s(\d+\/+\d+\/+\d+)\s((.*)|DEL)$/i, (msg) ->
     timecard(msg, "modify_note")
 
-  robot.hear /打刻削除\s(\d+\D+\d+\D+\d+)$/i, (msg) ->
+  robot.hear /打刻削除\s(\d+\/+\d+\/+\d+)$/i, (msg) ->
     timecard(msg, "delete")
 
   robot.hear /打刻確認$/i, (msg) ->
     timecard(msg, "record_now")
-  robot.hear /打刻確認\s(\d+\D+\d+)$/i, (msg) ->
+  robot.hear /打刻確認\s(\d+\/+\d+)$/i, (msg) ->
     timecard(msg, "record")
 
   getNowDate = ->
@@ -136,7 +136,7 @@ module.exports = (robot) ->
                   (e) -> timecardLogic msg, bucket, userId, mode, JSON.parse("[]"))
 
   getYearMonth = (date) ->
-    /^(\d+)\D+(\d+)/.exec(date)[0]
+    /^(\d+)\/+(\d+)/.exec(date)[0]
 
   timecardLogic = (msg, bucket, userId, mode, userDataJson) ->
     #console.log userDataJson
