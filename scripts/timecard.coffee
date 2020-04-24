@@ -19,12 +19,16 @@ CosDA = require('./_cos_data_access')
 strEnpty = "空欄"
 module.exports = (robot) ->
 
-  robot.hear /(打刻出社|:出社:)$/i, (msg) ->
+  robot.hear /打刻出社$/i, (msg) ->
+    timecard(msg, "attend")
+  robot.hear /(:|：)出社(:|：)/i, (msg) ->
     timecard(msg, "attend")
   robot.hear /打刻出社\s(\d+\/+\d+\/+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_attend")
 
-  robot.hear /(打刻退社|:退社:)$/i, (msg) ->
+  robot.hear /打刻退社$/i, (msg) ->
+    timecard(msg, "leave")
+  robot.hear /(:|：)退社(:|：)/i, (msg) ->
     timecard(msg, "leave")
   robot.hear /打刻退社\s(\d+\/+\d+\/+\d+)\s((\d+:\d+)|DEL)$/i, (msg) ->
     timecard(msg, "modify_leave")
